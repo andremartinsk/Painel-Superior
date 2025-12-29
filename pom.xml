@@ -1,81 +1,108 @@
 
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
-    <groupId>com.vale.vantage</groupId>
-    <artifactId>rolos-monitor</artifactId>
-    <version>0.1.0</version>
-    <name>Rolos Monitor</name>
-    <description>Painel web para monitoramento de rolos (Spring Boot + WebFlux + SSE)</description>
+  <modelVersion>4.0.0</modelVersion>
 
-    <properties>
-        <java.version>17</java.version>
-        <spring.boot.version>3.3.4</spring.boot.version>
-    </properties>
+  <!-- Identidade do projeto -->
+  <groupId>com.vale.vantage</groupId>
+  <artifactId>rolos-monitor</artifactId>
+  <version>0.1.0</version>
+  <name>Rolos Monitor</name>
+  <description>Painel web para monitoramento de rolos (Spring Boot + WebFlux + SSE)</description>
+  <packaging>jar</packaging>
 
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring.boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+  <!-- Propriedades -->
+  <properties>
+    <java.version>17</java.version>
+    <spring.boot.version>3.3.4</spring.boot.version>
+    <!-- Garante encoding consistente -->
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
 
+  <!-- Alinhamento de versões via BOM do Spring Boot -->
+  <dependencyManagement>
     <dependencies>
-        <!-- WebFlux para SSE e WebClient -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webflux</artifactId>
-        </dependency>
-
-        <!-- Jackson -->
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-
-        <!-- Actuator (opcional) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
-        </dependency>
-
-        <!-- Starter base (logging, etc.) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-
-        <!-- Testes (opcional) -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+      <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-dependencies</artifactId>
+        <version>${spring.boot.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
     </dependencies>
+  </dependencyManagement>
 
-    <build>
-        <plugins>
-            <!-- ✅ Correção: versão explicitamente definida -->
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <version>3.3.4</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <release>${java.version}</release>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
+  <!-- Dependências -->
+  <dependencies>
+    <!-- WebFlux (para SSE, WebClient, reativo) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+
+    <!-- Starter base (logging, validações etc.) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+
+    <!-- Actuator (monitoramento/health) -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+
+    <!-- Jackson (JSON) -->
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+
+    <!-- Testes -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <!-- Build -->
+  <build>
+    <plugins>
+      <!-- Plugin ESSENCIAL: gera o fat JAR executável (corrige o erro do manifest) -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <version>${spring.boot.version}</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>repackage</goal>
+            </goals>
+          </execution>
+        </executions>
+        <!-- Opcional: declarar explicitamente a classe principal -->
+        <configuration>
+          <!-- Troque pelo FQCN da sua classe @SpringBootApplication -->
+          <mainClass>com.vale.vantage.RolosMonitorApplication</mainClass>
+        </configuration>
+      </plugin>
+
+      <!-- Compilação visando Java 17 -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <release>${java.version}</release>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
 </project>
