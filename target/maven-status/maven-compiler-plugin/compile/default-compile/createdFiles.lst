@@ -1,0 +1,16 @@
+com\vale\vantage\web\StreamController.class
+com\vale\vantage\auth\LoginRequest.class
+com\vale\vantage\model\InspectionTag.class
+com\vale\vantage\model\AlarmResponse.class
+com\vale\vantage\RolosMonitorApplication.class
+com\vale\vantage\model\Geolocation.class
+com\vale\vantage\api\AlarmClient.class
+com\vale\vantage\auth\CognitoAuthResponse$AuthenticationResult.class
+com\vale\vantage\auth\CognitoAuthResponse.class
+com\vale\vantage\auth\TokenService.class
+com\vale\vantage\web\LoginRequest.class
+com\vale\vantage\model\AlarmItem.class
+com\vale\vantage\auth\TokenService$1.class
+com\vale\vantage\auth\CredentialStore.class
+com\vale\vantage\web\AuthController.class
+com\vale\vantage\service\AlarmService.class

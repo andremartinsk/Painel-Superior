@@ -1,0 +1,19 @@
+
+server:
+  port: 8080
+
+vantage:
+  alarm:
+    base-url: https://586fqbdcb0.execute-api.us-east-1.amazonaws.com/v1
+    path: /alarm-list
+  site-id: 419b9bc6-bcc7-42af-9563-c9febd32a3e7
+
+cognito:
+  endpoint: https://cognito-idp.us-east-1.amazonaws.com/
+  client-id: 73mihlfr6jsb82g320tai1egdt
+  # username/password serão enviados via /auth/login (não ficam no YAML)
+
+logging:
+  level:
+    root: INFO
+    com.vale.vantage: INFO
