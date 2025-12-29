@@ -1,0 +1,620 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <title>Painel de Rolos</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+          --bg:#0f172a; --panel:#111827; --border:#1f2937;
+          --muted:#94a3b8; --fg:#e2e8f0; --primary:#2563eb;
+          --danger:#ef4444; --ok:#10b981; --alert:#f59e0b;
+
+          /* Azul brilhante para ALARME (piscando) */
+          --alarm-blue: #3b82f6;       /* base */
+          --alarm-blue-weak: #93c5fd;  /* pico claro */
+        }
+        *{ box-sizing:border-box }
+        html, body{
+          height:100%; margin:0; background:var(--bg); color:var(--fg);
+          font-family:Arial, Helvetica, sans-serif; overflow:hidden;
+        }
+        .container{ height:100vh; width:100%; display:flex; flex-direction:column; padding:16px; gap:16px }
+
+        /* ====== HEADER (AGORA EM GRID) ====== */
+        .header{
+          display:grid;                 /* grid com 3 zonas: esquerda | centro | direita */
+          grid-template-columns:auto 1fr auto;
+          align-items:center;
+          background:var(--panel); border:1px solid var(--border); border-radius:12px;
+          padding:16px 20px; flex:0 0 auto;
+          gap:12px;
+        }
+        /* bloco de marca à esquerda */
+        .brand { display:inline-flex; align-items:center; gap:10px; }
+        .brand-icon {
+          width:50px; height:50px; object-fit:contain;
+          border-radius:4px;
+        }
+        .brand-title {
+          font-size:14px; font-weight:600; letter-spacing:.2px;
+          color:#f8fafc; /* levemente mais claro que --fg */
+          white-space:nowrap;           /* evita quebra em telas maiores */
+        }
+        /* título central */
+        .panel-title {
+          margin:0;
+          font-size:20px; font-weight:700; color:#ffffff;
+          text-align:center;
+          justify-self:center;          /* garante centralização na coluna do meio */
+        }
+        /* barra do usuário à direita */
+        .userbar{display:flex; align-items:center; gap:12px; justify-self:end}
+        .user-pill{padding:6px 12px; border-radius:999px; background:#0b1220; border:1px solid var(--border); color:var(--fg); font-size:13px}
+        .btn{padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; transition:filter .2s}
+        .btn:hover{filter:brightness(1.1)} .btn-primary{background:var(--primary); color:#fff} .btn-danger{background:var(--danger); color:#fff}
+
+        .card{
+          background:var(--panel); border:1px solid var(--border); border-radius:12px;
+          padding:16px; display:flex; flex-direction:column; flex:1 1 auto; min-height:0;
+        }
+        .muted{color:var(--muted); font-size:13px}
+        .hidden{display:none !important}
+        .login-wrapper{max-width:520px; margin:80px auto}
+        label{display:block; margin:10px 0 6px}
+        input{width:100%; padding:12px; margin:0 0 12px 0; border-radius:8px; border:1px solid var(--border); background:#0b1220; color:#e2e8f0}
+        .row{display:flex; gap:10px; align-items:center}
+
+        .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex:0 0 auto}
+        .left-group{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+        .pill{padding:6px 10px; border-radius:999px; border:1px solid var(--border); color:var(--muted); font-size:12px}
+        .status{display:flex; align-items:center; gap:8px}
+        .status .dot{width:10px; height:10px; border-radius:50%}
+        .dot.alert{background:var(--alert)} .dot.ok{background:var(--ok)}
+
+        .belt-card{ flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:8px }
+        .belt-canvas{ flex:1 1 auto; min-height:0; width:100%; height:100%; display:block; background:transparent }
+        .belt-legend{display:flex; gap:12px; align-items:center; flex-wrap:wrap; flex:0 0 auto}
+        .legend-item{display:flex; align-items:center; gap:6px}
+        .box{width:14px; height:14px; border:1px solid var(--border); border-radius:3px}
+        .box.alert{background:var(--alert)}
+        .box.alarm { background: var(--alarm-blue); border-color: var(--alarm-blue); }
+
+        @keyframes alarmPulse {
+          0%, 100% { fill: var(--alarm-blue); stroke: var(--alarm-blue); }
+          50%      { fill: var(--alarm-blue-weak); stroke: var(--alarm-blue-weak); }
+        }
+        .alarm-blink { animation: alarmPulse 1s infinite; }
+
+        /* click visual nos rolos */
+        .clickable { cursor: pointer; }
+
+        /* Modal simples */
+        .modal-backdrop{
+          position:fixed; inset:0; background:rgba(0,0,0,.45);
+          display:none; align-items:center; justify-content:center;
+          z-index:1000;
+        }
+        .modal-backdrop.open{ display:flex; }
+        .modal{
+          background:var(--panel); border:1px solid var(--border); border-radius:12px;
+          padding:16px; max-width:440px; width:calc(100% - 32px);
+          box-shadow: 0 10px 24px rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.25);
+        }
+        .modal h3{ margin:0 0 8px 0; font-size:16px }
+        .modal p{ margin:0 0 12px 0; color:var(--muted) }
+        .modal .actions{ display:flex; justify-content:flex-end; gap:8px }
+        .modal .actions .btn{ border:1px solid var(--border) }
+        .modal .actions .btn-primary{ background:var(--primary) }
+        @media (max-width:420px){
+          .modal{ max-width:92% }
+        }
+
+        /* ===== Legibilidade melhorada de textos no SVG ===== */
+        svg text {
+          font-family: Arial, Helvetica, sans-serif;
+          fill: #e2e8f0;
+          text-rendering: optimizeLegibility;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+          paint-order: stroke fill;
+          stroke: rgba(0,0,0,0.65);
+          stroke-width: 0.6px;
+        }
+        svg text.p-label { font-weight: 700; }
+        svg text.cavalete-label { font-weight: 700; }
+
+        /* ===== Responsividade ===== */
+        @media (max-width:900px){ .container{padding:12px} }
+        @media (max-width:640px){
+          .header{
+            grid-template-columns: 1fr;   /* empilha: marca | título | usuário */
+            gap:10px;
+          }
+          .brand-title{ white-space:normal; }
+          .panel-title{ justify-self:start; font-size:18px; }
+          .userbar{ justify-self:start; }
+          .topbar{flex-direction:column; align-items:flex-start; gap:10px}
+        }
+    </style>
+</head>
+<body>
+
+<!-- LOGIN PAGE -->
+<div id="loginPage" class="login-wrapper">
+    <div class="card" style="flex:none">
+        <h2 style="margin:0 0 8px 0;">Login</h2>
+        <p class="muted">Use seu e-mail e senha do Cognito.</p>
+        <label for="email">E-mail</label>
+        <input id="email" type="email" placeholder="seu-email@empresa.com" autocomplete="username" />
+        <label for="password">Senha</label>
+        <input id="password" type="password" placeholder="********" autocomplete="current-password" />
+        <div class="row" style="margin-top:10px;"><button id="loginBtn" class="btn btn-primary">Entrar</button></div>
+        <div id="loginMsg" class="hidden"></div>
+    </div>
+</div>
+
+<!-- PANEL PAGE -->
+<div id="panelPage" class="container hidden">
+    <div class="header">
+        <!-- ESQUERDA: ícone + título CMA -->
+        <div class="brand">
+            <img src="CMA.jpeg" alt="Ícone da CMA" class="brand-icon" loading="lazy">
+
+            <span class="brand-title">
+        CMA<br>
+        Centro de<br>
+        Monitoramento de<br>
+        Ativos
+            </span>
+
+        </div>
+
+        <!-- CENTRO: título do painel -->
+        <h1 class="panel-title">Painel de Rolos</h1>
+
+        <!-- DIREITA: usuário e desconectar -->
+        <div class="userbar">
+            <span class="user-pill" id="userEmail">—</span>
+            <button id="logoutBtn" class="btn btn-danger">Desconectar</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="topbar">
+            <div class="left-group">
+                <span class="pill" id="countOpen">Abertos: 0</span>
+                <span class="pill" id="countAck">Reconhecidos: 0</span>
+                <span class="pill" id="localClock">Relógio: —</span>
+                <span class="pill" id="lastEvent">Último evento: —</span>
+                <span class="pill" id="nextTick">Próx. atualização: —</span>
+            </div>
+            <div class="status">
+                <div class="dot ok"></div><span class="muted" id="streamStatus">Aguardando...</span>
+            </div>
+        </div>
+
+        <div class="belt-card">
+            <!-- SVG preenche a área sobrante automaticamente -->
+            <svg id="beltSvg" class="belt-canvas" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+                <defs>
+                    <!-- sombra leve opcional para textos (melhora leitura) -->
+                    <filter id="textShadow" x="-50%" y="-50%" width="200%" height="200%">
+                        <feDropShadow dx="0" dy="0" stdDeviation="1.0" flood-color="rgba(0,0,0,0.45)" />
+                    </filter>
+                </defs>
+                <g id="beltRoot">
+                    <rect id="beltOutline" rx="8" fill="#0b1220" stroke="#1f2937" stroke-width="3"></rect>
+                    <rect id="rangeHighlight" fill="#1f2937" opacity="0.25"></rect>
+                    <text id="beltTitle"></text> <!-- título da faixa -->
+                    <g id="slots"></g>
+                    <g id="labels"></g>
+                </g>
+            </svg>
+
+            <div class="belt-legend">
+                <div class="legend-item"><div class="box alert"></div><span class="muted">Alerta</span></div>
+                <div class="legend-item"><div class="box alarm"></div><span class="muted">Alarme</span></div>
+                <div class="legend-item"><span class="muted">P1: Rolo Esquerdo Superior · P2: Esquerdo Inferior · P3: Central · P4: Direito Inferior · P5: Direito Superior</span></div>
+            </div>
+        </div>
+
+        <div id="panelMsg" class="hidden"></div>
+    </div>
+</div>
+
+<!-- Modal simples -->
+<div id="modalBackdrop" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <h3 id="modalTitle">Motivo</h3>
+        <p id="modalBody">—</p>
+        <div class="actions">
+            <button id="modalCloseBtn" class="btn">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // =======================
+    // Funções de mensagem
+    // =======================
+    function showLoginMessage(text, ok = false) { const el = document.getElementById('loginMsg'); if (!el) return; el.className = ok ? 'success' : 'error'; el.textContent = text; el.classList.remove('hidden'); }
+    function hideLoginMessage() { const el = document.getElementById('loginMsg'); if (!el) return; el.classList.add('hidden'); el.textContent = ''; }
+    function showPanelMessage(text, ok = false) { const el = document.getElementById('panelMsg'); if (!el) return; el.className = ok ? 'success' : 'error'; el.textContent = text; el.classList.remove('hidden'); }
+    function hidePanelMessage() { const el = document.getElementById('panelMsg'); if (!el) return; el.classList.add('hidden'); el.textContent = ''; }
+
+    // ----- ELEMENTOS -----
+    const loginPage   = document.getElementById('loginPage');
+    const panelPage   = document.getElementById('panelPage');
+    const loginBtn    = document.getElementById('loginBtn');
+    const logoutBtn   = document.getElementById('logoutBtn');
+    const emailEl     = document.getElementById('email');
+    const passEl      = document.getElementById('password');
+
+    const streamStatus = document.getElementById('streamStatus');
+    const countOpenEl  = document.getElementById('countOpen');
+    const countAckEl   = document.getElementById('countAck');
+    const userEmailEl  = document.getElementById('userEmail');
+
+    const localClockEl = document.getElementById('localClock');
+    const lastEventEl  = document.getElementById('lastEvent');
+    const nextTickEl   = document.getElementById('nextTick');
+
+    // SVG refs
+    const beltSvg        = document.getElementById('beltSvg');
+    const beltOutline    = document.getElementById('beltOutline');
+    const rangeHighlight = document.getElementById('rangeHighlight');
+    const beltTitle      = document.getElementById('beltTitle');  // título
+    const slotsGroup     = document.getElementById('slots');
+    const labelsGroup    = document.getElementById('labels');
+
+    // ----- Modal refs -----
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const modalBody     = document.getElementById('modalBody');
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+    function openModal(motivoText){
+      modalBody.textContent = motivoText || '—';
+      modalBackdrop.classList.add('open');
+      modalBackdrop.setAttribute('aria-hidden', 'false');
+    }
+    function closeModal(){
+      modalBackdrop.classList.remove('open');
+      modalBackdrop.setAttribute('aria-hidden', 'true');
+    }
+    modalCloseBtn.addEventListener('click', closeModal);
+    modalBackdrop.addEventListener('click', (e)=>{ if (e.target === modalBackdrop) closeModal(); });
+
+    // ----- ESTADO -----
+    let evtSource = null;
+    const alarmsByTag = new Map();
+    let lastEventAt = null; let secondTicker = null;
+
+    // ----- PARÂMETROS -----
+    const TOTAL_CS = 116;
+    const POSITIONS = [1,2,3,4,5];
+
+    // Título
+    const BELT_TITLE = 'CN-01 MESA DE IMPACTO';
+    const TITLE_FS   = 14;
+    const TITLE_FILL = '#e2e8f0';
+    const TITLE_PAD_Y = 8;
+
+    // Geometria base
+    let SLOT_W = 14;
+    let SLOT_H = 40;
+    let COL_GAP = 4;
+    let GAP_Y = 12;
+    let LEFT_X = 40;
+    let RIGHT_PAD = 40;
+    let TOP_Y = 30;
+    let TOP_PAD = 10;
+    let BOTTOM_PAD = 10;
+
+    /* >>> Fonte maior para P dentro dos traços */
+    const TEXT_FS = 11;  // antes 9 — ajuste conforme sua tela (10–12)
+    const LABEL_SHIFT_Y = 160;
+    const HL_START = 90, HL_END = 95;
+
+    // Calculados dinamicamente
+    let COL_W, CANVAS_W, CANVAS_H, COLUMN_TOP, COLUMN_BOTTOM, COLUMN_Y_CENTER;
+
+    function formatDateTime(d){ const pad=n=>String(n).padStart(2,'0'); return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }
+    function getAlertColor(item){
+      switch((item.triggeredBy||'').toLowerCase()){
+        case 'lowbeltcontact':   return '#f59e0b';
+        case 'suspectedfailure': return '#fb7185';
+        default:                 return '#f59e0b';
+      }
+    }
+    // Backend continua com "CS"; a exibição: Cavalete
+    function parseCS(item){ const s=item.sequentialIdler||''; const m=s.match(/^CS(\d+)$/i); return m?parseInt(m[1],10):null; }
+    function parseP(item){
+      const t=item.tag||''; const m=t.match(/-P(\d+)$/i); if(m) return parseInt(m[1],10);
+      const d=item.idDevice||''; const m2=d.match(/_(\d)$/); return m2?parseInt(m2[1],10):null;
+    }
+
+    // ======= GEOMETRIA =======
+    function computeGeometry(){
+      COL_W = SLOT_W + COL_GAP;
+
+      COLUMN_TOP = TOP_Y;
+      COLUMN_BOTTOM = TOP_Y + (POSITIONS.length - 1) * (SLOT_H + GAP_Y) + SLOT_H;
+      COLUMN_Y_CENTER = (COLUMN_TOP + COLUMN_BOTTOM) / 2;
+
+      CANVAS_W = LEFT_X + TOTAL_CS * COL_W + RIGHT_PAD;
+      CANVAS_H = TOP_PAD + (COLUMN_BOTTOM - COLUMN_TOP) + BOTTOM_PAD + TOP_Y;
+
+      beltSvg.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
+
+      beltOutline.setAttribute('x', '10');
+      beltOutline.setAttribute('y', String(TOP_PAD));
+      beltOutline.setAttribute('width', String(CANVAS_W - 20));
+      beltOutline.setAttribute('height', String(CANVAS_H - TOP_PAD - 10));
+
+      rangeHighlight.setAttribute('y', String(TOP_PAD));
+      rangeHighlight.setAttribute('height', String(CANVAS_H - TOP_PAD - 10));
+
+      const titleX = CANVAS_W / 2;
+      const titleY = Math.max(0, TOP_PAD - TITLE_PAD_Y);
+      beltTitle.setAttribute('x', String(titleX));
+      beltTitle.setAttribute('y', String(titleY));
+      beltTitle.setAttribute('fill', TITLE_FILL);
+      beltTitle.setAttribute('font-size', String(TITLE_FS));
+      beltTitle.setAttribute('text-anchor', 'middle');
+      beltTitle.setAttribute('dominant-baseline', 'baseline');
+      beltTitle.textContent = BELT_TITLE;
+    }
+
+    // ======= CONSTRUÇÃO =======
+    function buildBelt(){
+      computeGeometry();
+      slotsGroup.innerHTML = '';
+      labelsGroup.innerHTML = '';
+
+      for(let cs=1; cs<=TOTAL_CS; cs++){
+        const xCol = LEFT_X + (cs - 1) * COL_W;
+
+        const col = document.createElementNS('http://www.w3.org/2000/svg','g');
+        col.setAttribute('class','col');
+        col.setAttribute('data-cs', String(cs));
+        col.setAttribute('transform', `translate(${xCol},0)`);
+
+        for(let i=0; i<POSITIONS.length; i++){
+          const p = POSITIONS[i];
+          const y = TOP_Y + i * (SLOT_H + GAP_Y);
+
+          const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+          rect.setAttribute('id', `slot-CS${cs}-P${p}`);
+          rect.setAttribute('x', '0');
+          rect.setAttribute('y', String(y));
+          rect.setAttribute('width', String(SLOT_W));
+          rect.setAttribute('height', String(SLOT_H));
+          rect.setAttribute('rx', '3');
+          rect.setAttribute('fill', '#0b1220');
+          rect.setAttribute('stroke','#1f2937');
+          rect.setAttribute('stroke-width','2');
+
+          // Título básico (tooltip)
+          const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+          title.textContent = `Cavalete${cs} · P${p}`;
+          rect.appendChild(title);
+          col.appendChild(rect);
+
+          const cx = SLOT_W / 2;
+          const cy = y + SLOT_H / 2;
+          const t = document.createElementNS('http://www.w3.org/2000/svg','text');
+          t.setAttribute('class', 'p-label');
+          t.setAttribute('x', String(cx));
+          t.setAttribute('y', String(cy));
+          t.setAttribute('fill', '#e2e8f0');
+          t.setAttribute('font-size', String(TEXT_FS));
+          t.setAttribute('text-anchor', 'middle');
+          t.setAttribute('dominant-baseline', 'central');
+          t.setAttribute('pointer-events','none');
+          t.setAttribute('transform', `rotate(-90 ${cx} ${cy})`);
+          t.setAttribute('filter', 'url(#textShadow)');
+          t.textContent = `P${p}`;
+          col.appendChild(t);
+        }
+
+        slotsGroup.appendChild(col);
+
+        const xCenter = xCol + COL_W / 2;
+        const yCenter = COLUMN_Y_CENTER + LABEL_SHIFT_Y;
+
+        const label = document.createElementNS('http://www.w3.org/2000/svg','text');
+        label.setAttribute('class', 'cavalete-label');
+        label.setAttribute('fill','#e2e8f0');
+        label.setAttribute('font-size','10');
+        label.setAttribute('text-anchor','middle');
+        label.setAttribute('dominant-baseline','central');
+        label.setAttribute('transform', `rotate(-90 ${xCenter} ${yCenter})`);
+        label.setAttribute('x', String(xCenter));
+        label.setAttribute('y', String(yCenter));
+        label.setAttribute('filter', 'url(#textShadow)');
+        label.textContent = `Cavalete${cs}`;
+        labelsGroup.appendChild(label);
+      }
+
+      const xStart = LEFT_X + (HL_START - 1) * COL_W;
+      const xEnd   = LEFT_X + HL_END * COL_W;
+      rangeHighlight.setAttribute('x', String(xStart));
+      rangeHighlight.setAttribute('width', String(xEnd - xStart));
+    }
+
+    // ======= PINTAR SLOT =======
+    function paintSlot(cs,p,item){
+      if(!cs||!p) return;
+      if(cs<1||cs>TOTAL_CS) return;
+      if(p<1||p>5) return;
+      const el = document.getElementById(`slot-CS${cs}-P${p}`);
+      if(!el) return;
+
+      const type = (item.type||'').toLowerCase();
+      const state = item.state || 'A_U';
+
+      el.classList.remove('alarm-blink', 'clickable');
+
+      if (type === 'alarm') {
+        el.removeAttribute('fill');
+        el.removeAttribute('stroke');
+        el.setAttribute('stroke-width', state==='A_U' ? '3' : '2');
+        el.classList.add('alarm-blink', 'clickable');
+      } else {
+        const isAlert = type === 'alert';
+        const color   = isAlert ? getAlertColor(item) : '#10b981';
+        el.setAttribute('fill', isAlert ? color : '#0b1220');
+        el.setAttribute('stroke', isAlert ? color : '#1f2937');
+        el.setAttribute('stroke-width', state==='A_U' ? '3' : '2');
+        if (isAlert) el.classList.add('clickable');
+      }
+
+      el.dataset.triggeredBy = item.triggeredBy || '-';
+      el.dataset.type = item.type || '';
+
+      // Tooltip detalhado (Cavalete)
+      el.querySelector('title')?.replaceChildren();
+      const tt = `Cavalete${cs} · P${p}
+Estado: ${state} · Tipo: ${item.type||'-'}
+Motivo: ${item.triggeredBy||'-'}
+TAG: ${item.tag||'-'}
+Atualizado: ${item.updatedAt ? formatDateTime(new Date(item.updatedAt)) : '-'}`;
+      const title = document.createElementNS('http://www.w3.org/2000/svg','title');
+      title.textContent = tt;
+      el.appendChild(title);
+    }
+
+    // Clique nos rolos: mostra modal “Motivo:”
+    slotsGroup.addEventListener('click', (e)=>{
+      const rect = e.target.closest('rect');
+      if (!rect) return;
+      const motivo = rect.dataset.triggeredBy || '-';
+      openModal(motivo ? `Motivo: ${motivo}` : 'Motivo: —');
+    });
+
+    // ======= CONTADORES (mantidos) =======
+    function recomputeCounters(){
+      let open=0, ack=0;
+      for(const [, item] of alarmsByTag){
+        if ((item.type || '').toLowerCase()!=='alert') continue; // mantém contagem só de ALERTA
+        if (item.state==='A_A') ack++; else open++;
+      }
+      countOpenEl.textContent = `Não Reconhecidos: ${open}`;
+      countAckEl.textContent  = `Reconhecidos: ${ack}`;
+    }
+
+    function startSecondTicker(){ stopSecondTicker(); updateClockAndNextTick(); secondTicker=setInterval(updateClockAndNextTick,1000); }
+    function stopSecondTicker(){ if(secondTicker) clearInterval(secondTicker); secondTicker=null; }
+    function updateClockAndNextTick(){
+      const now=new Date();
+      localClockEl.textContent=`Relógio: ${formatDateTime(now)}`;
+      if(lastEventAt){
+        lastEventEl.textContent=`Último evento: ${formatDateTime(lastEventAt)}`;
+        const elapsedSec=Math.floor((now-lastEventAt)/1000);
+        const remaining=Math.max(0,10-(elapsedSec%10));
+        nextTickEl.textContent=`Próx. atualização: ${remaining}s`;
+      }else{
+        lastEventEl.textContent=`Último evento: —`;
+        nextTickEl.textContent=`Próx. atualização: —`;
+      }
+    }
+
+    function goToPanel(userEmail){
+      loginPage.classList.add('hidden');
+      panelPage.classList.remove('hidden');
+      userEmailEl.textContent = userEmail || '—';
+      startSecondTicker();
+      buildBelt();
+    }
+    function goToLogin(){
+      panelPage.classList.add('hidden');
+      loginPage.classList.remove('hidden');
+      emailEl.value=''; passEl.value='';
+      userEmailEl.textContent='—';
+      stopSecondTicker();
+    }
+
+    const BASE_URL = ''; // ex.: '/api' ou 'http://localhost:8080'
+    const withBase = (p) => (BASE_URL ? `${BASE_URL}${p}` : p);
+
+    function startStream(){
+      if(evtSource) evtSource.close();
+      hidePanelMessage();
+      alarmsByTag.clear();
+      recomputeCounters();
+
+      try { evtSource = new EventSource(withBase('/stream/alarms'), { withCredentials: true }); }
+      catch { evtSource = new EventSource(withBase('/stream/alarms')); }
+
+      streamStatus.textContent='Conectado';
+
+      evtSource.onmessage = (e)=>{
+        try{
+          const item=JSON.parse(e.data);
+          const tag=item.tag||''; if(!tag) return;
+          alarmsByTag.set(tag,item);
+          const cs=parseCS(item); const p=parseP(item);
+          if(cs && p) paintSlot(cs,p,item);
+          recomputeCounters();
+          lastEventAt = new Date();
+          updateClockAndNextTick();
+        }catch(err){ showPanelMessage('Falha ao atualizar um item: '+err.message); }
+      };
+      evtSource.onerror = ()=>{ streamStatus.textContent='Conexão perdida, reconectando...'; };
+    }
+
+    async function fetchMe(){
+      try{
+        const r=await fetch(withBase('/auth/me'), { credentials: 'include' });
+        if(!r.ok) return null;
+        return await r.json();
+      }catch(_){ return null; }
+    }
+
+    loginBtn.onclick = async ()=>{
+      hideLoginMessage();
+      const username=(emailEl.value||'').trim();
+      const password=passEl.value||'';
+      if(!username||!password){ showLoginMessage('Informe e-mail e senha.'); return; }
+      try{
+        const resp=await fetch(withBase('/auth/login'), {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({username,password}),
+          credentials:'include'
+        });
+        if(!resp.ok){
+          let txt=''; try{ txt=await resp.text(); }catch(_){}
+          showLoginMessage(`Login incorreto (${resp.status}): ${txt || '—'}`);
+          return;
+        }
+        const me=await fetchMe();
+        goToPanel(me?.username || username);
+        startStream();
+      }catch(err){
+        showLoginMessage('Erro no login: ' + (err?.message || String(err)));
+      }
+    };
+
+    logoutBtn.onclick = async ()=>{
+      try{ await fetch(withBase('/auth/logout'), { method:'POST', credentials:'include' }); }
+      finally{
+        if(evtSource) evtSource.close(); evtSource=null;
+        streamStatus.textContent='Desconectado';
+        lastEventAt=null; alarmsByTag.clear(); recomputeCounters();
+        goToLogin();
+      }
+    };
+
+    (async ()=>{
+      const me=await fetchMe();
+      if(me?.username){
+        goToPanel(me.username);
+        startSecondTicker();
+      }
+    })();
+</script>
+</body>
+</html>

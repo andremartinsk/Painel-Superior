@@ -1,0 +1,30 @@
+# --- IDEs e Editores ---
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+
+# --- Compilação e Build (Maven/Gradle) ---
+target/
+build/
+out/
+bin/
+
+# --- Arquivos do Sistema ---
+.DS_Store
+Thumbs.db
+
+# --- Logs e Arquivos Temporários ---
+*.log
+tmp/
+temp/
+
+# --- Wrapper do Maven (Opcional, mas comum ignorar se não for usar) ---
+.mvn/
+mvnw
+mvnw.cmd
