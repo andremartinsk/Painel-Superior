@@ -23,8 +23,3 @@ Thumbs.db
 *.log
 tmp/
 temp/
-
-# --- Wrapper do Maven (Opcional, mas comum ignorar se não for usar) ---
-.mvn/
-mvnw
-mvnw.cmd
